@@ -54,7 +54,7 @@ The lift is modest. Waits in this synthetic data are mostly driven by triage lev
 Synthetic data; SLA targets are assumed (see `DECLARATIONS.md`); no clinical outcomes; decision support only, not for clinical decisions.
 
 ## Screenshots
-![Overview]("C:\Users\LENOVO\OneDrive\Desktop\New folder\01_overview.png")
+![Overview]("docs/screenshots/01_overview.png")
 ![Watchlist](docs/screenshots/02_watchlist.png)
 ![Diagnostics](docs/screenshots/03_diagnostics.png)
 
