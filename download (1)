@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+.venv/
+# raw dataset is provided by the organisers - do not commit
+data/*.csv

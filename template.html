@@ -1,0 +1,71 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CareRadar – Forgotten Patient Early-Warning (Baseline Prototype)</title>
+<style>
+:root{--bg:#f4f7f9;--card:#fff;--ink:#12303b;--mut:#5d7480;--teal:#0e8a9a;--red:#d64550;--amb:#e8a33d;--grn:#2e9e6b;--line:#dce5ea}
+*{box-sizing:border-box}body{margin:0;font-family:Calibri,Arial,sans-serif;background:var(--bg);color:var(--ink)}
+header{background:#0b3a47;color:#fff;padding:14px 28px;display:flex;align-items:center;justify-content:space-between}
+header h1{font-size:22px;margin:0}header small{color:#9fd6de;display:block;font-size:13px;margin-top:2px}
+nav{display:flex;gap:6px}nav button{background:transparent;border:1px solid #2c6676;color:#cfe9ee;padding:8px 16px;border-radius:20px;font-size:14px;cursor:pointer}
+nav button.on{background:var(--teal);border-color:var(--teal);color:#fff}
+main{padding:20px 28px;max-width:1280px;margin:auto}.view{display:none}.view.on{display:block}
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:16px}
+.k{background:var(--card);border-radius:10px;padding:14px 16px;box-shadow:0 1px 3px #0001}
+.k b{font-size:30px;display:block}.k span{font-size:13px;color:var(--mut)}.k.r b{color:var(--red)}.k.a b{color:var(--amb)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.card{background:var(--card);border-radius:10px;padding:16px;box-shadow:0 1px 3px #0001}
+.card h3{margin:0 0 4px;font-size:16px}.card p.s{margin:0 0 10px;color:var(--mut);font-size:12.5px}
+svg text{font-family:Calibri,Arial,sans-serif;fill:var(--ink)}
+table{width:100%;border-collapse:collapse;font-size:13.5px}th{text-align:left;color:var(--mut);font-weight:600;padding:6px 8px;border-bottom:2px solid var(--line)}
+td{padding:6px 8px;border-bottom:1px solid var(--line)}.pill{padding:2px 9px;border-radius:10px;color:#fff;font-size:12px}
+.filters{display:flex;gap:12px;margin-bottom:12px;align-items:center;font-size:14px}select,input[type=range]{font-size:14px}
+select{padding:5px 8px;border:1px solid var(--line);border-radius:6px}
+.bar{height:8px;border-radius:4px;background:var(--line);width:90px;display:inline-block;vertical-align:middle}.bar i{display:block;height:8px;border-radius:4px}
+.note{font-size:12px;color:var(--mut);margin-top:10px}
+</style></head><body>
+<header><div><h1>CareRadar <small>Early-warning for the “forgotten patient” · baseline prototype · synthetic data</small></h1></div>
+<nav><button class="on" data-v="ov">Overview</button><button data-v="wl">Watchlist</button><button data-v="dx">Diagnostics &amp; Data Quality</button></nav></header>
+<main>
+<section id="ov" class="view on">
+ <div class="kpis" id="kpis"></div>
+ <div class="grid">
+  <div class="card"><h3>Wait vs SLA target by triage level</h3><p class="s">Mean wait (minutes) against assumed target; label = % of patients over target</p><div id="c1"></div></div>
+  <div class="card"><h3>SLA breach rate by department</h3><p class="s">% of encounters waiting longer than the triage target</p><div id="c2"></div></div>
+  <div class="card"><h3>Breach rate by arrival hour</h3><p class="s">% over target, 0–23h</p><div id="c3"></div></div>
+  <div class="card"><h3>Distribution of wait times</h3><p class="s">Encounters per 15-minute bucket; 6.1% wait longer than 90 min</p><div id="c4"></div></div>
+ </div>
+</section>
+<section id="wl" class="view">
+ <div class="filters"><label>Department <select id="fd"></select></label><label>Triage <select id="ft"><option>All</option><option>Critical</option><option>High</option><option>Medium</option><option>Low</option></select></label>
+ <label>Min risk <input id="fr" type="range" min="0" max="90" value="50"> <b id="frv">0.50</b></label><span id="cnt" style="margin-left:auto;color:#5d7480"></span></div>
+ <div class="card"><h3>Patients most at risk of being forgotten</h3><p class="s">Risk = model probability that wait exceeds the triage SLA (baseline gradient-boosting model, top 400 shown)</p>
+ <table><thead><tr><th>Encounter</th><th>Patient</th><th>Department</th><th>Triage</th><th>Visit</th><th>Age</th><th>Chronic</th><th>Wait / SLA</th><th>Risk</th><th>Outcome</th></tr></thead><tbody id="wb"></tbody></table></div>
+</section>
+<section id="dx" class="view">
+ <div class="grid">
+  <div class="card"><h3>Diagnostic test turnaround: Urgent vs Routine</h3><p class="s">Mean minutes from request to completion – urgent tests are not completed faster</p><div id="c5"></div></div>
+  <div class="card"><h3>Baseline model vs triage-only rule (Rule = triage-level breach rate)</h3><p class="s">Predicting SLA breach · train Jan–Sep, test Oct–Dec 2025</p><div id="c6"></div><div class="note" id="mnote"></div></div>
+ </div>
+ <div class="card" style="margin-top:16px"><h3>Data quality checks</h3><table><thead><tr><th>Check</th><th>Result</th></tr></thead><tbody id="dq"></tbody></table></div>
+</section>
+</main>
+<script>
+const D=/*DATA*/;const $=s=>document.querySelector(s);
+const col={Critical:'#d64550',High:'#e8a33d',Medium:'#0e8a9a',Low:'#2e9e6b'};
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('nav button,.view').forEach(x=>x.classList.remove('on'));b.classList.add('on');$('#'+b.dataset.v).classList.add('on')});
+const K=D.kpi;$('#kpis').innerHTML=[['',K.enc.toLocaleString(),'Encounters analysed'],['',K.mean+' min','Average wait'],['r',K.breach+'%','Waiting past triage SLA'],['r',K.crit30+'%','Critical patients waiting >30 min'],['a',K.lbc+'%','Left before care']].map(x=>`<div class="k ${x[0]}"><b>${x[1]}</b><span>${x[2]}</span></div>`).join('');
+function hbar(el,rows,max,fmt,color){const W=520,rh=30,H=rows.length*rh+8;let s=`<svg viewBox="0 0 ${W} ${H}" width="100%">`;rows.forEach((r,i)=>{const y=i*rh+4,w=(W-210)*r.v/max;s+=`<text x="0" y="${y+18}" font-size="13">${r.l}</text><rect x="130" y="${y+4}" width="${w}" height="18" rx="3" fill="${color(r)}"/><text x="${136+w}" y="${y+18}" font-size="12.5">${fmt(r)}</text>`});el.innerHTML=s+'</svg>'}
+// c1 grouped mean vs SLA
+(()=>{const W=520,H=230;let s=`<svg viewBox="0 0 ${W} ${H}" width="100%">`;const mx=100,bw=34;D.tri.forEach((t,i)=>{const x=40+i*125,h1=170*t.mean/mx,h2=170*t.sla/mx;s+=`<rect x="${x}" y="${195-h1}" width="${bw}" height="${h1}" fill="${col[t.level]}" rx="3"/><rect x="${x+bw+4}" y="${195-h2}" width="${bw}" height="${h2}" fill="#c9d6dc" rx="3"/><text x="${x+bw/2}" y="${190-h1}" text-anchor="middle" font-size="12">${t.mean}</text><text x="${x+bw+4+bw/2}" y="${190-h2}" text-anchor="middle" font-size="12">${t.sla}</text><text x="${x+bw+2}" y="214" text-anchor="middle" font-size="13">${t.level}</text><text x="${x+bw+2}" y="228" text-anchor="middle" font-size="12" fill="#d64550" style="fill:#d64550">${t.breach}% over</text>`});s+=`<rect x="360" y="4" width="10" height="10" fill="#0e8a9a"/><text x="375" y="13" font-size="12">Mean wait</text><rect x="445" y="4" width="10" height="10" fill="#c9d6dc"/><text x="460" y="13" font-size="12">SLA</text></svg>`;$('#c1').innerHTML=s})();
+hbar($('#c2'),D.dep.map(d=>({l:d.dept,v:d.breach})),40,r=>r.v+'%',r=>r.v>=28?'#d64550':r.v>=24?'#e8a33d':'#0e8a9a');
+(()=>{const W=520,H=190,mx=Math.max(...D.hb)*1.1;let s=`<svg viewBox="0 0 ${W} ${H}" width="100%">`;const bw=18;D.hb.forEach((v,h)=>{const bh=140*v/mx;s+=`<rect x="${8+h*21}" y="${150-bh}" width="${bw}" height="${bh}" rx="2" fill="${v>=D.kpi.breach+3?'#d64550':'#0e8a9a'}"/>`;if(h%3==0)s+=`<text x="${8+h*21+bw/2}" y="168" text-anchor="middle" font-size="11">${h}h</text>`});s+=`<text x="8" y="186" font-size="11.5" style="fill:#5d7480">Red = at least 3 pts above the ${D.kpi.breach}% average</text></svg>`;$('#c3').innerHTML=s})();
+(()=>{const W=520,H=190,c=D.hist.c,mx=Math.max(...c);let s=`<svg viewBox="0 0 ${W} ${H}" width="100%">`;c.forEach((v,i)=>{const bh=125*v/mx,x=8+i*47;s+=`<rect x="${x}" y="${150-bh}" width="42" height="${bh}" rx="2" fill="${D.hist.b[i]>=90?'#d64550':'#0e8a9a'}"/><text x="${x+21}" y="${144-bh}" text-anchor="middle" font-size="11">${v}</text><text x="${x+21}" y="168" text-anchor="middle" font-size="11">${D.hist.b[i]}</text>`});$('#c4').innerHTML=s+'</svg>'})();
+// watchlist
+const deps=['All',...new Set(D.watch.map(w=>w.dept))].sort();$('#fd').innerHTML=deps.map(d=>`<option>${d}</option>`).join('');
+function wl(){const d=$('#fd').value,t=$('#ft').value,r=$('#fr').value/100;$('#frv').textContent=r.toFixed(2);const rows=D.watch.filter(w=>(d=='All'||w.dept==d)&&(t=='All'||w.tri==t)&&w.risk>=r);$('#cnt').textContent=rows.length+' patients flagged';
+$('#wb').innerHTML=rows.slice(0,14).map(w=>`<tr><td>${w.id}</td><td>${w.pid}</td><td>${w.dept}</td><td><span class="pill" style="background:${col[w.tri]}">${w.tri}</span></td><td>${w.vt}</td><td>${w.age}</td><td>${w.chronic}</td><td>${w.wait} / ${w.sla} min</td><td><span class="bar"><i style="width:${w.risk*100}%;background:${w.risk>.7?'#d64550':'#e8a33d'}"></i></span> ${w.risk.toFixed(2)}</td><td>${w.out}</td></tr>`).join('')}
+['fd','ft','fr'].forEach(i=>$('#'+i).oninput=wl);wl();
+// diagnostics
+(()=>{const W=520,H=230;let s=`<svg viewBox="0 0 ${W} ${H}" width="100%">`;D.ttype.forEach((t,i)=>{const x=20+i*83,h1=160*t.urg/90,h2=160*t.rout/90;s+=`<rect x="${x}" y="${190-h1}" width="30" height="${h1}" fill="#d64550" rx="3"/><rect x="${x+32}" y="${190-h2}" width="30" height="${h2}" fill="#9fb4bd" rx="3"/><text x="${x+15}" y="${185-h1}" text-anchor="middle" font-size="11">${Math.round(t.urg)}</text><text x="${x+47}" y="${185-h2}" text-anchor="middle" font-size="11">${Math.round(t.rout)}</text><text x="${x+31}" y="208" text-anchor="middle" font-size="12">${t.type}</text>`});s+=`<rect x="340" y="2" width="10" height="10" fill="#d64550"/><text x="355" y="11" font-size="12">Urgent</text><rect x="420" y="2" width="10" height="10" fill="#9fb4bd"/><text x="435" y="11" font-size="12">Routine</text><text x="20" y="226" font-size="12" style="fill:#d64550">Urgent − Routine = ${D.kpi.urgent_gap} min on average → priority flag has no effect</text></svg>`;$('#c5').innerHTML=s})();
+hbar($('#c6'),[{l:'Rule · AUC',v:D.met.base_auc},{l:'Model · AUC',v:D.met.gb_auc},{l:'Rule · PR-AUC',v:D.met.base_ap},{l:'Model · PR-AUC',v:D.met.gb_ap}],1,r=>r.v.toFixed(2),r=>r.l.startsWith('Model')?'#0e8a9a':'#9fb4bd');
+$('#mnote').textContent=`Breach prevalence ${(D.met.breach_rate*100).toFixed(1)}% · train n=${D.met.n_train}, test n=${D.met.n_test}. PR-AUC of a random model ≈ ${D.met.breach_rate.toFixed(2)}.`;
+$('#dq').innerHTML=D.dq.map(x=>`<tr><td>${x.check}</td><td>${x.res}</td></tr>`).join('');
+</script></body></html>
