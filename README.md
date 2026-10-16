@@ -4,7 +4,7 @@ DATATHON 2026, Round 1 baseline prototype. Track: **Health – The Forgotten Pat
 
 CareRadar flags patients at risk of waiting longer than their triage target, so staff can act before the breach.
 
-**Team:** [team name] · [member 1], [member 2]
+**Team:** [Nexus] · [Padam Charan], [Kandula Hima Lakshmi Aishwarya]
 
 ## What it does
 - Joins the four tables (encounters is the hub; keys per the dataset README).
